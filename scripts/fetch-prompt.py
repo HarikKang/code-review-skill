@@ -138,6 +138,8 @@ def main():
     parser.add_argument("--platform-url", default=os.getenv("PROMPT_PLATFORM_URL"), help="提示词平台URL")
     parser.add_argument("--api-key", default=os.getenv("PROMPT_PLATFORM_KEY"), help="API密钥")
     parser.add_argument("--no-cache", action="store_true", help="禁用提示词缓存")
+    parser.add_argument("--split", "-s", type=int, default=0, help="将提示词拆分为N块（供orchestrator使用）")
+    parser.add_argument("--split-dir", default="prompts", help="拆分块输出目录（默认：prompts）")
 
     args = parser.parse_args()
 
@@ -152,10 +154,22 @@ def main():
         truncated_tokens = estimate_tokens(prompt)
         print(f"已裁剪至约 {truncated_tokens} tokens")
 
-    with open(args.output, 'w') as f:
-        f.write(prompt)
-
-    print(f"提示词已保存至: {args.output}")
+    if args.split > 0:
+        os.makedirs(args.split_dir, exist_ok=True)
+        lines = prompt.split('\n')
+        chunk_size = len(lines) // args.split
+        for i in range(args.split):
+            start = i * chunk_size
+            end = start + chunk_size if i < args.split - 1 else len(lines)
+            chunk = '\n'.join(lines[start:end])
+            chunk_file = os.path.join(args.split_dir, f"prompt_{i+1:03d}.md")
+            with open(chunk_file, 'w', encoding='utf-8') as f:
+                f.write(chunk)
+            print(f"已生成: {chunk_file}")
+    else:
+        with open(args.output, 'w', encoding='utf-8') as f:
+            f.write(prompt)
+        print(f"提示词已保存至: {args.output}")
 
     if not args.no_cache:
         cache_path = save_prompt_cache(prompt, args.type)

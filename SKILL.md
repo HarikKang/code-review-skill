@@ -111,6 +111,7 @@ PR #123: 添加用户认证
 - `scripts/fetch-prompt.py` - 获取并裁剪提示词
 - `scripts/code-chunker.py` - 基于AST的代码分块
 - `scripts/review-reporter.py` - 生成JSON报告
+- `scripts/review-orchestrator.py` - 批量文件评审编排（逐文件+分块提示词）
 
 ## 使用示例
 
