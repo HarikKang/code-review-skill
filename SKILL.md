@@ -2,7 +2,7 @@
 name: code-review
 description: AI代码评审助手。用于评审代码变更、Pull Request，或当用户请求代码分析、缺陷检测、安全审查、最佳实践反馈时。支持多语言并提供结构化JSON输出。
 license: MIT
-compatibility: 需要 Python 3.10+、git 及提示词平台API访问权限
+compatibility: 需要Python 3.10+、git及访问提示词平台
 metadata:
   author: HarikKang
   version: "1.0"
@@ -13,122 +13,69 @@ metadata:
 
 ## 概述
 
-此Skill执行AI驱动的代码评审，流程如下：
-1. 从提示词平台获取评审提示词
-2. 通过上下文管理分析代码变更
-3. 使用AST技术处理大型代码变更
-4. 输出结构化JSON报告
+利用平台agent能力进行AI驱动的代码评审：
+1. 通过librarian获取评审提示词
+2. 逐文件并行调用agent评审
+3. 输出JSON报告
 
 ## 工作流程
 
 ### 第1步：获取评审提示词
 
-从提示词平台获取AI评审提示词：
+使用librarian agent从提示词平台获取：
 
-```bash
-python3 scripts/fetch-prompt.py --type code-review --output temp-prompt.md
+```
+用librarian获取code-review类型的评审提示词
 ```
 
-如果提示词超过8000 tokens，将自动按优先级裁剪：
-1. 核心指令
-2. 语言特定规则
-3. 常见模式
-4. 边缘情况
+### 第2步：准备待评审文件
 
-### 第2步：准备待评审代码
+获取PR/变更的文件列表：
 
-**Git diff格式：**
-```bash
-git diff HEAD~1 --no-color > changes.diff
+```
+用git获取变更文件：git diff --name-only HEAD~1
 ```
 
-**大型代码库处理：**
-使用AST分块处理超过500行的文件：
-```bash
-python3 scripts/code-chunker.py --file large_file.py --output-dir chunks/
+### 第3步：并行评审
+
+使用task()并行调用多个agent评审：
+
+```python
+# 每个agent评审一个文件
+task(category="ultrabrain", prompt=f"""
+提示词：{prompt}
+待评审文件：{file_path}
+输出JSON格式评审结果
+""")
 ```
-
-### 第3步：执行AI评审
-
-向AI模型发送准备好的上下文，包含：
-- 已裁剪的提示词（如需要）
-- 代码变更/代码块
-- 上一轮评审摘要（如为多轮）
-
-**上下文管理：**
-- 第一轮：完整上下文
-- 后续轮次：将前序发现总结为要点，仅保留关键代码片段
-- 每个文件最多3轮
 
 ### 第4步：生成报告
 
-输出结构化JSON至`review-result.json`：
+合并结果并写入review-result.json：
 
-```bash
-python3 scripts/review-reporter.py --input review-output.md --output review-result.json
+```json
+{
+  "review_id": "review_xxx",
+  "timestamp": "...",
+  "files_reviewed": [...],
+  "summary": {...},
+  "findings": [...],
+  "metrics": {...}
+}
 ```
 
-## 输入格式
+## 上下文管理
 
-### Git Diff
-```
-diff --git a/src/main.py b/src/main.py
---- a/src/main.py
-+++ b/src/main.py
-@@ -1,5 +1,7 @@
-+import logging
- def hello():
-+    print("debug")
-```
-
-### 文件列表
-```
-src/main.py
-src/utils.py
-tests/test_main.py
-```
-
-### Pull Request
-```
-PR #123: 添加用户认证
-- 添加登录/登出接口
-- 实现JWT令牌
-- 添加密码哈希
-```
-
-## 输出格式
-
-评审结果输出为JSON格式至`review-result.json`，包含：review_id、timestamp、files_reviewed、summary、findings、metrics字段。详细字段定义见`assets/review-report-schema.json`。
-
-## 常见问题
-
-- 上下文溢出：多轮评审时摘要前序发现
-- 大型文件：使用AST分块处理
-- 多语言：根据扩展名自动检测语言
+- 每个agent session：1个文件 + 部分提示词 + 前序摘要
+- 大文件使用ast_grep_search分块处理
+- 多文件用task并行评审
 
 ## 脚本说明
 
-- `scripts/fetch-prompt.py` - 获取并裁剪提示词
-- `scripts/code-chunker.py` - 基于AST的代码分块
-- `scripts/review-reporter.py` - 生成JSON报告
-- `scripts/review-orchestrator.py` - 批量文件评审编排（逐文件+分块提示词）
-
-## 使用示例
-
-```bash
-# 基础评审
-code-review --diff changes.diff --output review-result.json
-
-# 评审特定文件
-code-review --files src/*.py --output review-result.json
-
-# 带上下文摘要的评审
-code-review --diff changes.diff --summary prev-summary.md --output review-result.json
-```
+- `scripts/fetch-prompt.py` - 备选：本地获取提示词
+- `scripts/code-chunker.py` - 备选：大文件分块
 
 ## 环境变量
 
-- `PROMPT_PLATFORM_URL` - 提示词平台API端点
-- `PROMPT_PLATFORM_KEY` - API认证密钥
-- `REVIEW_MODEL` - 使用的AI模型（默认：gpt-4）
-- `MAX_TOKENS` - 最大上下文tokens（默认：8000）
+- `PROMPT_PLATFORM_URL` - 提示词平台API
+- `PROMPT_PLATFORM_KEY` - API密钥
