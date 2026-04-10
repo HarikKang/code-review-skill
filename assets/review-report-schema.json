@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Code Review Report",
+  "type": "object",
+  "required": ["review_id", "timestamp", "files_reviewed", "summary", "findings", "metrics"],
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "评审唯一标识符，格式：review_YYYYMMDD_HHMMSS_hash",
+      "example": "review_20240410_143022_a1b2c3"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "评审时间戳（ISO 8601格式）",
+      "example": "2024-04-10T14:30:22Z"
+    },
+    "files_reviewed": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "评审的文件列表",
+      "example": ["src/main.py", "src/auth.py", "tests/test_auth.py"]
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total_issues", "critical", "warnings", "suggestions"],
+      "properties": {
+        "total_issues": {"type": "integer", "minimum": 0},
+        "critical": {"type": "integer", "minimum": 0},
+        "warnings": {"type": "integer", "minimum": 0},
+        "suggestions": {"type": "integer", "minimum": 0}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "severity", "category", "message"],
+        "properties": {
+          "file": {"type": "string", "description": "源文件路径"},
+          "line": {"type": "integer", "description": "行号（可选）"},
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "warning", "suggestion"],
+            "description": "严重程度"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["security", "performance", "maintainability", "best-practice"],
+            "description": "问题类别"
+          },
+          "message": {"type": "string", "description": "问题描述"},
+          "suggestion": {"type": "string", "description": "修复建议"}
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "complexity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "代码复杂度"
+        },
+        "test_coverage": {
+          "type": "string",
+          "description": "测试覆盖率估计"
+        },
+        "maintainability": {
+          "type": "string",
+          "enum": ["good", "fair", "poor"],
+          "description": "可维护性评级"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "额外元数据（可选）",
+      "properties": {
+        "repo": {"type": "string"},
+        "branch": {"type": "string"},
+        "pr_number": {"type": "string"},
+        "reviewer": {"type": "string"},
+        "model": {"type": "string"}
+      }
+    }
+  }
+}
