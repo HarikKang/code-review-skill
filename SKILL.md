@@ -98,54 +98,13 @@ PR #123: 添加用户认证
 
 ## 输出格式
 
-```json
-{
-  "review_id": "review_20240410_001",
-  "timestamp": "2024-04-10T10:30:00Z",
-  "files_reviewed": ["src/main.py", "src/auth.py"],
-  "summary": {
-    "total_issues": 5,
-    "critical": 1,
-    "warnings": 3,
-    "suggestions": 1
-  },
-  "findings": [
-    {
-      "file": "src/main.py",
-      "line": 42,
-      "severity": "critical",
-      "category": "security",
-      "message": "SQL注入漏洞",
-      "suggestion": "使用参数化查询"
-    }
-  ],
-  "metrics": {
-    "complexity": "medium",
-    "test_coverage": "75%",
-    "maintainability": "good"
-  }
-}
-```
+评审结果输出为JSON格式至`review-result.json`，包含：review_id、timestamp、files_reviewed、summary、findings、metrics字段。详细字段定义见`assets/review-report-schema.json`。
 
-## 常见问题与解决方案
+## 常见问题
 
-### 问题：上下文窗口溢出
-**解决方案**：使用摘要-评审模式
-1. 将前序评审总结为要点
-2. 仅保留最关键的代码片段
-3. 每轮最多3个文件
-
-### 问题：大型文件处理
-**解决方案**：基于AST的分块
-- 按函数/类边界分割
-- 代码块重叠2行以保持上下文
-- 每个代码块最多200行
-
-### 问题：多语言项目
-**解决方案**：语言检测+针对性规则
-- 根据文件扩展名自动检测语言
-- 应用语言特定的评审规则
-- 处理混合语言的PR
+- 上下文溢出：多轮评审时摘要前序发现
+- 大型文件：使用AST分块处理
+- 多语言：根据扩展名自动检测语言
 
 ## 脚本说明
 
